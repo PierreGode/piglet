@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Piglet — Web Flasher</title>
+    <meta name="description" content="Flash Piglet wardriving firmware to your ESP32 device directly from the browser." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Russo+One&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <script
+      type="module"
+      src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
+    ></script>
+  </head>
+  <body>
+    <div class="page">
+      <!-- Hero -->
+      <div class="hero">
+        <img src="img/Piglet.png" alt="Piglet Wardriver PCB" />
+      </div>
+
+      <!-- Title block -->
+      <header class="title">
+        <div class="oink" aria-hidden="true">🐷</div>
+        <h1>Piglet</h1>
+        <p class="tagline">Wardriver &middot; Open Source &middot; ESP32</p>
+        <p class="desc">
+          Wi-Fi &amp; GPS wardriving platform. Scan, log, and upload
+          WiGLE-compatible data &mdash; all from a pocket-sized ESP32 device.
+        </p>
+        <p class="desc small">
+          2.4 &amp; 5 GHz scanning &middot; SD logging &middot; Web UI &middot;
+          ESP-Now Mesh &middot; OLED display
+        </p>
+      </header>
+
+      <div class="divider" aria-hidden="true">
+        <span>⚡</span>
+      </div>
+
+      <!-- Piglet Core -->
+      <section class="flash-panel" id="core">
+        <h2>Piglet Core</h2>
+        <p>
+          Main wardriving firmware for Seeed XIAO boards. Connect your device via
+          USB and select your board below.
+        </p>
+
+        <div class="chip-badges">
+          <span class="chip-badge"><span class="dot"></span>XIAO ESP32-S3</span>
+          <span class="chip-badge"><span class="dot"></span>XIAO ESP32-C5</span>
+          <span class="chip-badge"><span class="dot"></span>XIAO ESP32-C6</span>
+        </div>
+
+        <div class="flash-buttons">
+          <esp-web-install-button manifest="manifest-piglet-s3.json">
+            <button class="btn-flash" slot="activate">Flash &mdash; ESP32-S3</button>
+            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
+            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
+          </esp-web-install-button>
+
+          <esp-web-install-button manifest="manifest-piglet-c5.json">
+            <button class="btn-flash" slot="activate">Flash &mdash; ESP32-C5</button>
+            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
+            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
+          </esp-web-install-button>
+
+          <esp-web-install-button manifest="manifest-piglet-c6.json">
+            <button class="btn-flash" slot="activate">Flash &mdash; ESP32-C6</button>
+            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
+            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
+          </esp-web-install-button>
+        </div>
+
+        <p class="hint">
+          <strong>Trouble flashing?</strong> Hold <code>BOOT</code>, tap
+          <code>RESET</code>, release <code>BOOT</code> &mdash; then try again.
+        </p>
+      </section>
+
+      <div class="divider" aria-hidden="true">
+        <span>⚡</span>
+      </div>
+
+      <!-- PigletNode -->
+      <section class="flash-panel" id="node">
+        <h2>PigletNode</h2>
+        <p>
+          Standalone mesh node firmware for <strong>XIAO ESP32-C5</strong>. No
+          display, GPS, or SD card required &mdash; boots directly into ESP-Now
+          node mode and auto-pairs with any Piglet Core.
+        </p>
+
+        <div class="chip-badges">
+          <span class="chip-badge"><span class="dot"></span>XIAO ESP32-C5</span>
+        </div>
+
+        <div class="flash-buttons">
+          <esp-web-install-button manifest="manifest-pigletnode-c5.json">
+            <button class="btn-flash" slot="activate">Flash &mdash; PigletNode C5</button>
+            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
+            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
+          </esp-web-install-button>
+        </div>
+      </section>
+
+      <div class="divider" aria-hidden="true">
+        <span>⚡</span>
+      </div>
+
+      <!-- T-Dongle C5 -->
+      <section class="flash-panel" id="tdongle">
+        <h2>T-Dongle C5</h2>
+        <p>
+          Standalone variant for the <strong>LilyGo T-Dongle C5</strong> with
+          built-in ST7735 TFT display, APA102 LED, and TF card slot. Self-contained
+          single-file firmware &mdash; no external OLED required.
+        </p>
+
+        <div class="chip-badges">
+          <span class="chip-badge"><span class="dot"></span>LilyGo T-Dongle C5</span>
+        </div>
+
+        <div class="flash-buttons">
+          <esp-web-install-button manifest="manifest-tdongle-c5.json">
+            <button class="btn-flash" slot="activate">Flash &mdash; T-Dongle C5</button>
+            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
+            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
+          </esp-web-install-button>
+        </div>
+      </section>
+
+      <!-- Browser warning -->
+      <div id="browserWarn" class="browser-warn">
+        Web Serial is only available in Chromium-based browsers (Chrome, Edge, Opera) on desktop.
+      </div>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-row">
+          Boards: <code>XIAO ESP32-S3</code> &middot; <code>XIAO ESP32-C5</code>
+          &middot; <code>XIAO ESP32-C6</code> &middot; <code>T-Dongle C5</code>
+        </div>
+        <div class="footer-row">
+          Build: <code id="build">&mdash;</code>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/PierreGode/piglet">GitHub</a>
+          <span>&middot;</span>
+          <a href="https://www.midwestgadgets.org/product-page/piglet">Midwest Gadgets</a>
+          <span>&middot;</span>
+          <a href="https://discord.gg/W9DhgwZu">Discord</a>
+        </div>
+        <div class="footer-brand">
+          <span>A <a href="https://www.midwestgadgets.org/">Midwest Gadgets</a> project</span>
+        </div>
+      </footer>
+    </div>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

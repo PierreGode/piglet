@@ -1,0 +1,13 @@
+{
+  "name": "PigletNode (ESP32-C5)",
+  "version": "1.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C5",
+      "parts": [
+        { "path": "firmware/pigletnode-esp32c5.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

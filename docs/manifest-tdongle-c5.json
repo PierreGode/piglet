@@ -1,0 +1,13 @@
+{
+  "name": "T-Dongle C5 Piglet",
+  "version": "1.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C5",
+      "parts": [
+        { "path": "firmware/tdongle-c5-piglet.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

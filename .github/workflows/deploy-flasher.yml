@@ -1,0 +1,185 @@
+name: Build firmware and deploy web flasher
+
+on:
+  push:
+    branches: [main, deploy]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "$PWD/bin" >> $GITHUB_PATH
+
+      - name: Install ESP32 board cores
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls \
+            "https://espressif.github.io/arduino-esp32/package_esp32_dev_index.json"
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "Adafruit SSD1306"
+          arduino-cli lib install "Adafruit GFX Library"
+          arduino-cli lib install "Adafruit BusIO"
+          arduino-cli lib install "TinyGPSPlus"
+          arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "Adafruit ST7735 and ST7789 Library"
+
+      - name: Install esptool
+        run: pip install esptool
+
+      # ── Piglet Core — ESP32-S3 ──
+      - name: Compile Piglet Core (ESP32-S3)
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:XIAO_ESP32S3 \
+            --build-property "build.partitions=default" \
+            --export-binaries \
+            "Arduino Files/Piglet"
+
+      # ── Piglet Core — ESP32-C5 ──
+      - name: Compile Piglet Core (ESP32-C5)
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:XIAO_ESP32C5 \
+            --build-property "build.partitions=default" \
+            --export-binaries \
+            "Arduino Files/Piglet"
+
+      # ── Piglet Core — ESP32-C6 ──
+      - name: Compile Piglet Core (ESP32-C6)
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:XIAO_ESP32C6 \
+            --build-property "build.partitions=default" \
+            --export-binaries \
+            "Arduino Files/Piglet"
+
+      # ── PigletNode — ESP32-C5 ──
+      - name: Compile PigletNode (ESP32-C5)
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:XIAO_ESP32C5 \
+            --build-property "build.partitions=default" \
+            --export-binaries \
+            "PigletNode"
+
+      # ── T-Dongle C5 ──
+      - name: Compile T-Dongle C5
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:ESP32C5_DEV \
+            --build-property "build.partitions=default" \
+            --export-binaries \
+            "TDongleC5_Piglet"
+
+      # ── Stage site with merged firmware ──
+      - name: Stage site
+        run: |
+          mkdir -p site/firmware
+          cp -r docs/. site/
+
+          # Locate boot_app0.bin from the ESP32 core package
+          BOOT_APP0=$(find ~/.arduino15/packages/esp32 -name boot_app0.bin | head -n 1)
+          if [ -z "$BOOT_APP0" ]; then
+            echo "::error::boot_app0.bin not found"
+            exit 1
+          fi
+          echo "boot_app0.bin: $BOOT_APP0"
+
+          # ── Piglet Core ESP32-S3 ──
+          S3_DIR="Arduino Files/Piglet/build/esp32.esp32.XIAO_ESP32S3"
+          python -m esptool --chip esp32s3 merge_bin \
+            --output site/firmware/piglet-esp32s3.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 8MB \
+            0x0000   "$S3_DIR/Piglet.ino.bootloader.bin" \
+            0x8000   "$S3_DIR/Piglet.ino.partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$S3_DIR/Piglet.ino.bin"
+
+          # ── Piglet Core ESP32-C5 ──
+          C5_DIR="Arduino Files/Piglet/build/esp32.esp32.XIAO_ESP32C5"
+          python -m esptool --chip esp32c5 merge_bin \
+            --output site/firmware/piglet-esp32c5.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 4MB \
+            --target-offset 0x0 \
+            0x2000   "$C5_DIR/Piglet.ino.bootloader.bin" \
+            0x8000   "$C5_DIR/Piglet.ino.partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$C5_DIR/Piglet.ino.bin"
+
+          # ── Piglet Core ESP32-C6 ──
+          C6_DIR="Arduino Files/Piglet/build/esp32.esp32.XIAO_ESP32C6"
+          python -m esptool --chip esp32c6 merge_bin \
+            --output site/firmware/piglet-esp32c6.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 4MB \
+            --target-offset 0x0 \
+            0x0000   "$C6_DIR/Piglet.ino.bootloader.bin" \
+            0x8000   "$C6_DIR/Piglet.ino.partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$C6_DIR/Piglet.ino.bin"
+
+          # ── PigletNode ESP32-C5 ──
+          NODE_DIR="PigletNode/build/esp32.esp32.XIAO_ESP32C5"
+          python -m esptool --chip esp32c5 merge_bin \
+            --output site/firmware/pigletnode-esp32c5.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 4MB \
+            --target-offset 0x0 \
+            0x2000   "$NODE_DIR/PigletNode.ino.bootloader.bin" \
+            0x8000   "$NODE_DIR/PigletNode.ino.partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$NODE_DIR/PigletNode.ino.bin"
+
+          # ── T-Dongle C5 ──
+          TD_DIR="TDongleC5_Piglet/build/esp32.esp32.ESP32C5_DEV"
+          python -m esptool --chip esp32c5 merge_bin \
+            --output site/firmware/tdongle-c5-piglet.bin \
+            --flash_mode dio --flash_freq 80m --flash_size 4MB \
+            --target-offset 0x0 \
+            0x2000   "$TD_DIR/TDongleC5_Piglet.ino.bootloader.bin" \
+            0x8000   "$TD_DIR/TDongleC5_Piglet.ino.partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$TD_DIR/TDongleC5_Piglet.ino.bin"
+
+          # ── Inject version into manifests ──
+          VERSION="$(date -u +%-m.%-d).${GITHUB_SHA::7}"
+          echo "Version: $VERSION"
+
+          for m in manifest-piglet-s3.json manifest-piglet-c5.json manifest-piglet-c6.json \
+                   manifest-pigletnode-c5.json manifest-tdongle-c5.json; do
+            if [ -f "site/$m" ]; then
+              jq --arg v "$VERSION" '.version = $v' "site/$m" > "site/$m.tmp"
+              mv "site/$m.tmp" "site/$m"
+            fi
+          done
+
+          echo "{\"build\":\"$VERSION\",\"sha\":\"${GITHUB_SHA::7}\",\"date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > site/version.json
+
+          echo "=== Firmware files ==="
+          ls -lh site/firmware/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

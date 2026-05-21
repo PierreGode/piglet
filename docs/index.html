@@ -46,24 +46,17 @@
       <section class="flash-panel" id="core">
         <h2>Piglet Core</h2>
         <p>
-          Main wardriving firmware for Seeed XIAO boards. XIAO boards use native
-          USB (no UART bridge) &mdash; you <strong>must enter bootloader mode
-          before flashing</strong>.
+          Main wardriving firmware for Seeed XIAO boards. Plug in USB, click
+          Flash, and select your serial port.
         </p>
 
         <div class="boot-steps">
-          <p class="boot-title">⚠ Enter bootloader mode first:</p>
+          <p class="boot-title">Before flashing:</p>
           <ol>
-            <li>Hold the <code>BOOT</code> button on the XIAO</li>
-            <li>While holding <code>BOOT</code>, plug in the USB cable</li>
-            <li>Release <code>BOOT</code> after connecting</li>
-            <li>A new serial port appears &mdash; click Flash below and select it</li>
+            <li>Close Arduino IDE, Serial Monitor, or any other app using the serial port</li>
+            <li>Use a <strong>data-capable</strong> USB-C cable (not charge-only)</li>
+            <li>Click Flash and select the serial port (e.g. <code>USB JTAG/serial debug unit</code>)</li>
           </ol>
-          <p class="boot-note">
-            XIAO boards have <code>BOOT</code> and <code>RESET</code> buttons.
-            If already plugged in: hold <code>BOOT</code>, press <code>RESET</code>
-            once, then release <code>BOOT</code>.
-          </p>
         </div>
 
         <div class="chip-badges">
@@ -93,8 +86,8 @@
         </div>
 
         <p class="hint">
-          <strong>Still not working?</strong> Make sure you use a data-capable
-          USB-C cable (not charge-only). Try a different USB port.
+          <strong>Still not working?</strong> Make sure Arduino IDE / Serial
+          Monitor is closed. Try a different USB port or cable.
         </p>
       </section>
 
@@ -111,9 +104,8 @@
           node mode and auto-pairs with any Piglet Core.
         </p>
         <p class="hint" style="margin-bottom:1rem">
-          ⚠ Bootloader mode: Hold <code>BOOT</code>, plug in USB, release
-          <code>BOOT</code>. If already connected: hold <code>BOOT</code>,
-          press <code>RESET</code>, release <code>BOOT</code>.
+          Close Arduino IDE / Serial Monitor before flashing.
+          Use a data-capable USB-C cable.
         </p>
 
         <div class="chip-badges">
@@ -142,9 +134,8 @@
           single-file firmware &mdash; no external OLED required.
         </p>
         <p class="hint" style="margin-bottom:1rem">
-          ⚠ Bootloader mode: Hold <code>BOOT</code>, plug in USB, release
-          <code>BOOT</code>. If already connected: hold <code>BOOT</code>,
-          press <code>RESET</code>, release <code>BOOT</code>.
+          Close Arduino IDE / Serial Monitor before flashing.
+          Use a data-capable USB-C cable.
         </p>
 
         <div class="chip-badges">

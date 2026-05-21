@@ -16,10 +16,30 @@ const $ = (id) => document.getElementById(id);
 function showOverlay() {
   $("flash-overlay").hidden = false;
   $("flash-close").hidden = true;
+  $("flash-confirm-row").hidden = true;
   $("flash-log").textContent = "";
   $("flash-bar").style.width = "0%";
   $("flash-pct").textContent = "";
   $("flash-status").textContent = "Initializing\u2026";
+}
+
+function waitForConfirm() {
+  return new Promise((resolve) => {
+    const row = $("flash-confirm-row");
+    const btnYes = $("flash-confirm-yes");
+    const btnNo = $("flash-confirm-no");
+    row.hidden = false;
+    function cleanup(result) {
+      row.hidden = true;
+      btnYes.removeEventListener("click", onYes);
+      btnNo.removeEventListener("click", onNo);
+      resolve(result);
+    }
+    function onYes() { cleanup(true); }
+    function onNo() { cleanup(false); }
+    btnYes.addEventListener("click", onYes);
+    btnNo.addEventListener("click", onNo);
+  });
 }
 
 function hideOverlay() {
@@ -116,6 +136,20 @@ window.flashDevice = async function (manifestPath) {
           chip +
           "."
       );
+    }
+
+    /* 6b. Ask user to confirm before flashing */
+    setStatus("Ready to flash — confirm to proceed");
+    log("\n\u2705 Device verified: " + chip);
+    log("Firmware: " + manifest.name + " (" + (fwData.length / 1024).toFixed(0) + " KB)");
+    log("\nPress 'Flash Now' to begin or 'Cancel' to abort.\n");
+
+    const confirmed = await waitForConfirm();
+    if (!confirmed) {
+      setStatus("Flashing cancelled by user.");
+      await transport.disconnect();
+      $("flash-close").hidden = false;
+      return;
     }
 
     /* 7. Flash */

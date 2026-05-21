@@ -108,7 +108,7 @@ window.flashDevice = async function (manifestPath) {
 
     /* 6. Verify chip family */
     const normalize = (s) => s.replace(/[-_ ]/g, "").toUpperCase();
-    if (normalize(chip) !== normalize(build.chipFamily)) {
+    if (!normalize(chip).startsWith(normalize(build.chipFamily))) {
       throw new Error(
         "Wrong chip! Expected " +
           build.chipFamily +

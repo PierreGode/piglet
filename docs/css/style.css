@@ -428,6 +428,9 @@ button.btn-unsupported {
   align-items: center;
   justify-content: center;
 }
+.flash-overlay[hidden] {
+  display: none;
+}
 .flash-dialog {
   background: var(--surface);
   border: 1px solid var(--copper);

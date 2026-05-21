@@ -263,9 +263,11 @@ static void jcmkOnRecv(const esp_now_recv_info_t* info,
   if (meshCoreActive) {
     // ---- Core role: handle requests from nodes ----
   if (type == JCMK_MSG_CORE_REQUEST) {
-      Serial.printf("[CORE] RX CORE_REQUEST from %02X:%02X:%02X:%02X:%02X:%02X len=%d\n",
-        info->src_addr[0],info->src_addr[1],info->src_addr[2],
-        info->src_addr[3],info->src_addr[4],info->src_addr[5], len);
+      if (Serial.availableForWrite() > 64) {
+        Serial.printf("[CORE] RX CORE_REQUEST from %02X:%02X:%02X:%02X:%02X:%02X len=%d\n",
+          info->src_addr[0],info->src_addr[1],info->src_addr[2],
+          info->src_addr[3],info->src_addr[4],info->src_addr[5], len);
+      }
       coreSendReply(info->src_addr);  // reply immediately (safe from callback)
       uint8_t next = (coreReqTail + 1) % CORE_REQ_QUEUE;
       if (next != coreReqHead) {

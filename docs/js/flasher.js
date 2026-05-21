@@ -122,6 +122,7 @@ window.flashDevice = async function (manifestPath) {
     setStatus("Erasing flash\u2026");
     await loader.writeFlash({
       fileArray: [{ data: fwData, address: part.offset }],
+      flashSize: "keep",
       eraseAll: false,
       compress: true,
       reportProgress(_fileIndex, written, total) {

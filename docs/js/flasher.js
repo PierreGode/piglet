@@ -154,3 +154,106 @@ document.addEventListener("DOMContentLoaded", () => {
   const btn = $("flash-close");
   if (btn) btn.addEventListener("click", hideOverlay);
 });
+
+/* ---------- Serial Monitor ---------- */
+let _serialPort = null;
+let _serialReader = null;
+let _serialRunning = false;
+
+window.openLogs = async function () {
+  if (!("serial" in navigator)) {
+    alert("Web Serial is not supported in this browser. Use Chrome, Edge, or Opera.");
+    return;
+  }
+
+  const overlay = $("serial-overlay");
+  const logEl = $("serial-log");
+  logEl.textContent = "";
+  overlay.hidden = false;
+
+  try {
+    _serialPort = await navigator.serial.requestPort();
+  } catch (_e) {
+    overlay.hidden = true;
+    return;
+  }
+
+  const baud = parseInt($("serial-baud-select").value, 10);
+  try {
+    await _serialPort.open({ baudRate: baud });
+  } catch (err) {
+    logEl.textContent += "Failed to open port: " + err.message + "\n";
+    return;
+  }
+
+  _serialRunning = true;
+  serialLog("Connected at " + baud + " baud. Waiting for data\u2026\n");
+  readSerialLoop();
+};
+
+function serialLog(msg) {
+  const el = $("serial-log");
+  el.textContent += msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function readSerialLoop() {
+  const decoder = new TextDecoderStream();
+  const readableStreamClosed = _serialPort.readable.pipeTo(decoder.writable);
+  _serialReader = decoder.readable.getReader();
+
+  try {
+    while (_serialRunning) {
+      const { value, done } = await _serialReader.read();
+      if (done) break;
+      if (value) serialLog(value);
+    }
+  } catch (_e) {
+    /* port closed or disconnected */
+  } finally {
+    _serialReader.releaseLock();
+    try { await readableStreamClosed; } catch (_e) { /* ignore */ }
+  }
+}
+
+async function closeSerial() {
+  _serialRunning = false;
+  if (_serialReader) {
+    try { await _serialReader.cancel(); } catch (_e) { /* ignore */ }
+    _serialReader = null;
+  }
+  if (_serialPort) {
+    try { await _serialPort.close(); } catch (_e) { /* ignore */ }
+    _serialPort = null;
+  }
+  $("serial-overlay").hidden = true;
+}
+
+async function sendSerial(text) {
+  if (!_serialPort || !_serialPort.writable) return;
+  const encoder = new TextEncoder();
+  const writer = _serialPort.writable.getWriter();
+  await writer.write(encoder.encode(text + "\r\n"));
+  writer.releaseLock();
+  serialLog("> " + text + "\n");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const closeBtn = $("serial-close");
+  const clearBtn = $("serial-clear");
+  const sendBtn = $("serial-send");
+  const input = $("serial-input");
+
+  if (closeBtn) closeBtn.addEventListener("click", closeSerial);
+  if (clearBtn) clearBtn.addEventListener("click", () => { $("serial-log").textContent = ""; });
+  if (sendBtn) sendBtn.addEventListener("click", () => {
+    const text = input.value.trim();
+    if (text) { sendSerial(text); input.value = ""; }
+  });
+  if (input) input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const text = input.value.trim();
+      if (text) { sendSerial(text); input.value = ""; }
+    }
+  });
+});

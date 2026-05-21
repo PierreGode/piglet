@@ -487,3 +487,87 @@ button.btn-unsupported {
   word-break: break-all;
   line-height: 1.5;
 }
+
+/* ---- serial monitor ---- */
+button.btn-logs {
+  font-family: "Russo One", system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--copper);
+  background: transparent;
+  border: 1px solid var(--copper-dim);
+  padding: 0.7rem 1.5rem;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+button.btn-logs:hover {
+  background: rgba(212, 146, 42, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212, 146, 42, 0.15);
+}
+button.btn-logs:active {
+  transform: translateY(0);
+}
+.btn-small {
+  padding: 0.5rem 1rem !important;
+  font-size: 0.75rem !important;
+}
+
+.serial-dialog {
+  max-width: 600px !important;
+}
+.serial-baud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.serial-baud label {
+  color: var(--bone-dim);
+  font-size: 0.82rem;
+}
+.serial-baud select {
+  background: var(--bg);
+  color: var(--gold);
+  border: 1px solid var(--copper-dim);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.serial-log-area {
+  max-height: 320px;
+  min-height: 200px;
+}
+.serial-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.serial-input-row input {
+  flex: 1;
+  background: var(--bg);
+  color: var(--bone);
+  border: 1px solid var(--copper-dim);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.78rem;
+}
+.serial-input-row input::placeholder {
+  color: var(--ash);
+}
+.serial-input-row input:focus {
+  outline: none;
+  border-color: var(--copper);
+}
+.serial-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}

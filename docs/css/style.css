@@ -332,6 +332,20 @@ button.btn-unsupported {
   border-radius: 2px;
   font-size: 0.76rem;
 }
+.boot-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ash);
+  line-height: 1.5;
+}
+.boot-note code {
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  color: var(--gold);
+  background: rgba(212, 146, 42, 0.08);
+  padding: 0.05rem 0.35rem;
+  border-radius: 2px;
+  font-size: 0.76rem;
+}
 
 /* browser warning */
 .browser-warn {

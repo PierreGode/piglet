@@ -12,10 +12,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/style.css" />
-    <script
-      type="module"
-      src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
-    ></script>
+    <script type="module" src="js/flasher.js"></script>
   </head>
   <body>
     <div class="page">
@@ -66,23 +63,9 @@
         </div>
 
         <div class="flash-buttons">
-          <esp-web-install-button manifest="manifest-piglet-s3.json">
-            <button class="btn-flash" slot="activate">Flash &mdash; ESP32-S3</button>
-            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
-            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
-          </esp-web-install-button>
-
-          <esp-web-install-button manifest="manifest-piglet-c5.json">
-            <button class="btn-flash" slot="activate">Flash &mdash; ESP32-C5</button>
-            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
-            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
-          </esp-web-install-button>
-
-          <esp-web-install-button manifest="manifest-piglet-c6.json">
-            <button class="btn-flash" slot="activate">Flash &mdash; ESP32-C6</button>
-            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
-            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
-          </esp-web-install-button>
+          <button class="btn-flash" onclick="flashDevice('manifest-piglet-s3.json')">Flash &mdash; ESP32-S3</button>
+          <button class="btn-flash" onclick="flashDevice('manifest-piglet-c5.json')">Flash &mdash; ESP32-C5</button>
+          <button class="btn-flash" onclick="flashDevice('manifest-piglet-c6.json')">Flash &mdash; ESP32-C6</button>
         </div>
 
         <p class="hint">
@@ -113,11 +96,7 @@
         </div>
 
         <div class="flash-buttons">
-          <esp-web-install-button manifest="manifest-pigletnode-c5.json">
-            <button class="btn-flash" slot="activate">Flash &mdash; PigletNode C5</button>
-            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
-            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
-          </esp-web-install-button>
+          <button class="btn-flash" onclick="flashDevice('manifest-pigletnode-c5.json')">Flash &mdash; PigletNode C5</button>
         </div>
       </section>
 
@@ -143,11 +122,7 @@
         </div>
 
         <div class="flash-buttons">
-          <esp-web-install-button manifest="manifest-tdongle-c5.json">
-            <button class="btn-flash" slot="activate">Flash &mdash; T-Dongle C5</button>
-            <button class="btn-unsupported" slot="unsupported">Browser not supported &mdash; use Chrome, Edge, or Opera</button>
-            <button class="btn-unsupported" slot="not-allowed">HTTPS required for Web Serial</button>
-          </esp-web-install-button>
+          <button class="btn-flash" onclick="flashDevice('manifest-tdongle-c5.json')">Flash &mdash; T-Dongle C5</button>
         </div>
       </section>
 
@@ -176,6 +151,20 @@
           <span>A <a href="https://www.midwestgadgets.org/">Midwest Gadgets</a> project</span>
         </div>
       </footer>
+    </div>
+
+    <!-- Flash overlay -->
+    <div id="flash-overlay" class="flash-overlay" hidden>
+      <div class="flash-dialog">
+        <h3>🐷 Flashing Piglet</h3>
+        <div class="flash-progress-track">
+          <div id="flash-bar" class="flash-progress-fill"></div>
+        </div>
+        <p id="flash-pct" class="flash-pct"></p>
+        <p id="flash-status" class="flash-status">Initializing&hellip;</p>
+        <pre id="flash-log" class="flash-log"></pre>
+        <button id="flash-close" class="btn-flash" hidden>Close</button>
+      </div>
     </div>
 
     <script src="js/main.js"></script>

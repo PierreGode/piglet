@@ -5,7 +5,7 @@ let _esptool = null;
 async function getEsptool() {
   if (_esptool) return _esptool;
   _esptool = await import(
-    "https://esm.sh/esptool-js@0.6.0"
+    "https://unpkg.com/esptool-js@0.6.0/bundle.js"
   );
   return _esptool;
 }

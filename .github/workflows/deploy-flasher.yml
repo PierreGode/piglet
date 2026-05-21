@@ -49,7 +49,7 @@ jobs:
       - name: Compile Piglet Core (ESP32-S3)
         run: |
           arduino-cli compile \
-            --fqbn "esp32:esp32:XIAO_ESP32S3:PartitionScheme=no_ota" \
+            --fqbn "esp32:esp32:XIAO_ESP32S3:PartitionScheme=default_8MB" \
             --export-binaries \
             "Arduino Files/Piglet"
 
@@ -81,7 +81,7 @@ jobs:
       - name: Compile T-Dongle C5
         run: |
           arduino-cli compile \
-            --fqbn "esp32:esp32:ESP32C5_DEV:PartitionScheme=no_ota" \
+            --fqbn "esp32:esp32:esp32c5:PartitionScheme=no_ota" \
             --export-binaries \
             "TDongleC5_Piglet"
 

@@ -5,7 +5,7 @@ let _esptool = null;
 async function getEsptool() {
   if (_esptool) return _esptool;
   _esptool = await import(
-    "https://unpkg.com/esptool-js@0.6.0?module"
+    "https://esm.sh/esptool-js@0.6.0"
   );
   return _esptool;
 }
@@ -51,31 +51,7 @@ window.flashDevice = async function (manifestPath) {
   showOverlay();
 
   try {
-    /* 1. Load esptool-js */
-    setStatus("Loading flasher\u2026");
-    const { ESPLoader, Transport } = await getEsptool();
-
-    /* 2. Fetch manifest */
-    setStatus("Fetching firmware info\u2026");
-    const mResp = await fetch(manifestPath);
-    if (!mResp.ok) throw new Error("Manifest not found (" + mResp.status + ")");
-    const manifest = await mResp.json();
-    const build = manifest.builds[0];
-    const part = build.parts[0];
-    log("Firmware: " + manifest.name);
-    log("Target:   " + build.chipFamily);
-
-    /* 3. Download firmware binary */
-    setStatus("Downloading firmware\u2026");
-    const base = manifestPath.substring(0, manifestPath.lastIndexOf("/") + 1);
-    const fwUrl = part.path.startsWith("http") ? part.path : base + part.path;
-    const fwResp = await fetch(fwUrl);
-    if (!fwResp.ok)
-      throw new Error("Firmware download failed (" + fwResp.status + ")");
-    const fwData = new Uint8Array(await fwResp.arrayBuffer());
-    log("Size:     " + (fwData.length / 1024).toFixed(0) + " KB");
-
-    /* 4. Select serial port */
+    /* 1. Select serial port FIRST (needs user gesture) */
     setStatus("Select your serial port\u2026");
     let port;
     try {
@@ -85,6 +61,30 @@ window.flashDevice = async function (manifestPath) {
       $("flash-close").hidden = false;
       return;
     }
+
+    /* 2. Load esptool-js */
+    setStatus("Loading flasher\u2026");
+    const { ESPLoader, Transport } = await getEsptool();
+
+    /* 3. Fetch manifest */
+    setStatus("Fetching firmware info\u2026");
+    const mResp = await fetch(manifestPath);
+    if (!mResp.ok) throw new Error("Manifest not found (" + mResp.status + ")");
+    const manifest = await mResp.json();
+    const build = manifest.builds[0];
+    const part = build.parts[0];
+    log("Firmware: " + manifest.name);
+    log("Target:   " + build.chipFamily);
+
+    /* 4. Download firmware binary */
+    setStatus("Downloading firmware\u2026");
+    const base = manifestPath.substring(0, manifestPath.lastIndexOf("/") + 1);
+    const fwUrl = part.path.startsWith("http") ? part.path : base + part.path;
+    const fwResp = await fetch(fwUrl);
+    if (!fwResp.ok)
+      throw new Error("Firmware download failed (" + fwResp.status + ")");
+    const fwData = new Uint8Array(await fwResp.arrayBuffer());
+    log("Size:     " + (fwData.length / 1024).toFixed(0) + " KB");
 
     /* 5. Connect */
     setStatus("Connecting to device\u2026");

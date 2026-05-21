@@ -301,6 +301,38 @@ button.btn-unsupported {
   font-size: 0.76rem;
 }
 
+/* bootloader mode steps */
+.boot-steps {
+  background: rgba(212, 146, 42, 0.06);
+  border: 1px solid rgba(212, 146, 42, 0.25);
+  border-left: 3px solid var(--copper);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+.boot-title {
+  font-weight: 500;
+  color: var(--copper);
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+}
+.boot-steps ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--bone-dim);
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+.boot-steps ol code {
+  font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  color: var(--gold);
+  background: rgba(212, 146, 42, 0.08);
+  padding: 0.05rem 0.35rem;
+  border-radius: 2px;
+  font-size: 0.76rem;
+}
+
 /* browser warning */
 .browser-warn {
   display: none;

@@ -46,9 +46,20 @@
       <section class="flash-panel" id="core">
         <h2>Piglet Core</h2>
         <p>
-          Main wardriving firmware for Seeed XIAO boards. Connect your device via
-          USB and select your board below.
+          Main wardriving firmware for Seeed XIAO boards. XIAO boards use native
+          USB (no UART bridge) &mdash; you <strong>must enter bootloader mode
+          before flashing</strong>.
         </p>
+
+        <div class="boot-steps">
+          <p class="boot-title">⚠ Enter bootloader mode first:</p>
+          <ol>
+            <li>Hold the <code>BOOT</code> button</li>
+            <li>While holding, tap <code>RESET</code> (or re-plug USB)</li>
+            <li>Release <code>BOOT</code></li>
+            <li>A new serial port appears &mdash; click Flash below and select it</li>
+          </ol>
+        </div>
 
         <div class="chip-badges">
           <span class="chip-badge"><span class="dot"></span>XIAO ESP32-S3</span>
@@ -77,8 +88,9 @@
         </div>
 
         <p class="hint">
-          <strong>Trouble flashing?</strong> Hold <code>BOOT</code>, tap
-          <code>RESET</code>, release <code>BOOT</code> &mdash; then try again.
+          <strong>Still not working?</strong> Unplug USB, hold <code>BOOT</code>,
+          plug USB back in, release <code>BOOT</code>. The device should now show
+          as a new serial port in the browser dialog.
         </p>
       </section>
 
@@ -93,6 +105,10 @@
           Standalone mesh node firmware for <strong>XIAO ESP32-C5</strong>. No
           display, GPS, or SD card required &mdash; boots directly into ESP-Now
           node mode and auto-pairs with any Piglet Core.
+        </p>
+        <p class="hint" style="margin-bottom:1rem">
+          ⚠ Enter bootloader mode first: Hold <code>BOOT</code> → tap
+          <code>RESET</code> → release <code>BOOT</code>, then click Flash.
         </p>
 
         <div class="chip-badges">
@@ -119,6 +135,10 @@
           Standalone variant for the <strong>LilyGo T-Dongle C5</strong> with
           built-in ST7735 TFT display, APA102 LED, and TF card slot. Self-contained
           single-file firmware &mdash; no external OLED required.
+        </p>
+        <p class="hint" style="margin-bottom:1rem">
+          ⚠ Enter bootloader mode first: Hold <code>BOOT</code> → tap
+          <code>RESET</code> → release <code>BOOT</code>, then click Flash.
         </p>
 
         <div class="chip-badges">

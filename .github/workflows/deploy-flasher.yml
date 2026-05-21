@@ -49,8 +49,7 @@ jobs:
       - name: Compile Piglet Core (ESP32-S3)
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:XIAO_ESP32S3 \
-            --build-property "build.partitions=default" \
+            --fqbn "esp32:esp32:XIAO_ESP32S3:PartitionScheme=no_ota" \
             --export-binaries \
             "Arduino Files/Piglet"
 
@@ -58,8 +57,7 @@ jobs:
       - name: Compile Piglet Core (ESP32-C5)
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:XIAO_ESP32C5 \
-            --build-property "build.partitions=default" \
+            --fqbn "esp32:esp32:XIAO_ESP32C5:PartitionScheme=no_ota" \
             --export-binaries \
             "Arduino Files/Piglet"
 
@@ -67,8 +65,7 @@ jobs:
       - name: Compile Piglet Core (ESP32-C6)
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:XIAO_ESP32C6 \
-            --build-property "build.partitions=default" \
+            --fqbn "esp32:esp32:XIAO_ESP32C6:PartitionScheme=no_ota" \
             --export-binaries \
             "Arduino Files/Piglet"
 
@@ -76,8 +73,7 @@ jobs:
       - name: Compile PigletNode (ESP32-C5)
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:XIAO_ESP32C5 \
-            --build-property "build.partitions=default" \
+            --fqbn "esp32:esp32:XIAO_ESP32C5:PartitionScheme=default" \
             --export-binaries \
             "PigletNode"
 
@@ -85,8 +81,7 @@ jobs:
       - name: Compile T-Dongle C5
         run: |
           arduino-cli compile \
-            --fqbn esp32:esp32:ESP32C5_DEV \
-            --build-property "build.partitions=default" \
+            --fqbn "esp32:esp32:ESP32C5_DEV:PartitionScheme=no_ota" \
             --export-binaries \
             "TDongleC5_Piglet"
 
@@ -104,8 +99,24 @@ jobs:
           fi
           echo "boot_app0.bin: $BOOT_APP0"
 
+          # Helper: find the build dir for a sketch + board combo
+          find_build() {
+            local sketch_dir="$1" sketch_name="$2"
+            local dir=$(find "$sketch_dir/build" -name "${sketch_name}.ino.bin" -printf '%h\n' | head -n 1)
+            if [ -z "$dir" ]; then
+              echo "::error::Build dir not found for ${sketch_name}"
+              exit 1
+            fi
+            echo "$dir"
+          }
+
+          echo "=== Build tree ==="
+          find "Arduino Files/Piglet/build" PigletNode/build TDongleC5_Piglet/build -name '*.bin' 2>/dev/null || true
+
           # ── Piglet Core ESP32-S3 ──
-          S3_DIR="Arduino Files/Piglet/build/esp32.esp32.XIAO_ESP32S3"
+          S3_DIR=$(find_build "Arduino Files/Piglet" "Piglet")
+          # Re-find for the correct S3 build (contains S3 in path)
+          S3_DIR=$(find "Arduino Files/Piglet/build" -path '*S3*' -name "Piglet.ino.bin" -printf '%h\n' | head -n 1)
           python -m esptool --chip esp32s3 merge_bin \
             --output site/firmware/piglet-esp32s3.bin \
             --flash_mode dio --flash_freq 80m --flash_size 8MB \
@@ -115,7 +126,7 @@ jobs:
             0x10000  "$S3_DIR/Piglet.ino.bin"
 
           # ── Piglet Core ESP32-C5 ──
-          C5_DIR="Arduino Files/Piglet/build/esp32.esp32.XIAO_ESP32C5"
+          C5_DIR=$(find "Arduino Files/Piglet/build" -path '*C5*' -name "Piglet.ino.bin" -printf '%h\n' | head -n 1)
           python -m esptool --chip esp32c5 merge_bin \
             --output site/firmware/piglet-esp32c5.bin \
             --flash_mode dio --flash_freq 80m --flash_size 4MB \
@@ -126,7 +137,7 @@ jobs:
             0x10000  "$C5_DIR/Piglet.ino.bin"
 
           # ── Piglet Core ESP32-C6 ──
-          C6_DIR="Arduino Files/Piglet/build/esp32.esp32.XIAO_ESP32C6"
+          C6_DIR=$(find "Arduino Files/Piglet/build" -path '*C6*' -name "Piglet.ino.bin" -printf '%h\n' | head -n 1)
           python -m esptool --chip esp32c6 merge_bin \
             --output site/firmware/piglet-esp32c6.bin \
             --flash_mode dio --flash_freq 80m --flash_size 4MB \
@@ -137,7 +148,7 @@ jobs:
             0x10000  "$C6_DIR/Piglet.ino.bin"
 
           # ── PigletNode ESP32-C5 ──
-          NODE_DIR="PigletNode/build/esp32.esp32.XIAO_ESP32C5"
+          NODE_DIR=$(find "PigletNode/build" -name "PigletNode.ino.bin" -printf '%h\n' | head -n 1)
           python -m esptool --chip esp32c5 merge_bin \
             --output site/firmware/pigletnode-esp32c5.bin \
             --flash_mode dio --flash_freq 80m --flash_size 4MB \
@@ -148,7 +159,7 @@ jobs:
             0x10000  "$NODE_DIR/PigletNode.ino.bin"
 
           # ── T-Dongle C5 ──
-          TD_DIR="TDongleC5_Piglet/build/esp32.esp32.ESP32C5_DEV"
+          TD_DIR=$(find "TDongleC5_Piglet/build" -name "TDongleC5_Piglet.ino.bin" -printf '%h\n' | head -n 1)
           python -m esptool --chip esp32c5 merge_bin \
             --output site/firmware/tdongle-c5-piglet.bin \
             --flash_mode dio --flash_freq 80m --flash_size 4MB \

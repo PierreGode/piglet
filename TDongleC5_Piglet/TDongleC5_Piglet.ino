@@ -40,7 +40,7 @@
 #include "esp_wifi.h"
 
 // Firmware version
-#define FIRMWARE_VERSION "v2.51"
+#define FIRMWARE_VERSION "v2.52"
 
 // ---------------- Pins (T-DONGLE C5) ----------------
 struct PinMap {
@@ -271,9 +271,11 @@ static void apa102Write(uint8_t r, uint8_t g, uint8_t b, uint8_t brightness = 8)
   for (int i = 0; i < 4; i++) sendByte(0xFF);
 
   // Restore SPI peripheral routing — pinMode(OUTPUT) above disconnects pins from the
-  // SPI GPIO matrix (gpio_matrix_out sets SIG_GPIO_OUT_IDX). SPI.end()+begin() re-attaches
-  // MOSI (GPIO2) and MISO (GPIO7) back to the SPI peripheral.
-  SPI.end();
+  // SPI GPIO matrix (gpio_matrix_out sets SIG_GPIO_OUT_IDX). Calling SPI.begin() on an
+  // already-running bus re-attaches MOSI (GPIO2) and MISO (GPIO7) without stopping the
+  // peripheral. SPI.end() must NOT be called here — it destroys the bus state and
+  // orphans the SD card's registered SPI device handle, causing all subsequent SD
+  // writes (including CSV logging) to silently fail.
   SPI.begin(PINS.sd_sck, PINS.sd_miso, PINS.sd_mosi);
 }
 
@@ -539,7 +541,29 @@ static void appendWigleRow(const String& mac, const String& ssid, const String& 
   line += ",0,WIFI"; // RCOIs (empty), MfgrId (0), Type
 
   digitalWrite(PINS.tft_cs, HIGH);
-  logFile.println(line);
+  size_t written = logFile.println(line);
+
+  // Detect silent write failure — if println() returns 0 for a non-empty line,
+  // the SD card or file handle is broken. Attempt to reopen the log file once;
+  // if that also fails, mark SD as unusable until next boot.
+  if (written == 0 && line.length() > 0) {
+    static uint8_t consecFails = 0;
+    consecFails++;
+    Serial.printf("[SD] Write failed (%u consecutive)\n", consecFails);
+    if (consecFails >= 3) {
+      Serial.println("[SD] Attempting log reopen...");
+      closeLogFile();
+      if (openLogFile()) {
+        Serial.println("[SD] Reopen OK — retrying write");
+        logFile.println(line);  // best-effort retry
+        consecFails = 0;
+      } else {
+        Serial.println("[SD] Reopen FAILED — SD marked unusable");
+        sdOk = false;
+      }
+    }
+    return;
+  }
 
   static uint32_t lastFlushMs = 0;
   static uint32_t linesSinceFlush = 0;
@@ -1512,6 +1536,78 @@ static void pigTwerkStartTFT() {
   Serial.println("[PIG] TWERK ACTIVATED");
 }
 
+// ---- Sasquatch walk ----
+static bool     sqActive_  = false;
+static int16_t  sqX_       = -26;
+static uint32_t sqMs_      = 0;
+static uint8_t  sqPhase_   = 0;
+
+static void drawSasquatchTFT(int16_t x, int16_t y, uint8_t phase) {
+  // Classic frame 352 pose: mid-stride, upright, head turned back over right shoulder.
+  bool swing = (phase & 1);
+  // --- Head (turned back, flat-top sagittal crest) ---
+  tft.fillRoundRect(x + 14, y, 7, 7, 2, WHITE);
+  tft.fillRect(x + 14, y, 7, 3, WHITE);
+  tft.fillRect(x + 13, y + 3, 2, 4, WHITE);
+  // --- Neck ---
+  tft.fillRect(x + 14, y + 6, 5, 3, WHITE);
+  // --- Torso ---
+  tft.fillRoundRect(x + 10, y + 8, 10, 14, 3, WHITE);
+  tft.fillRect(x + 9, y + 9, 3, 10, WHITE);
+  tft.fillRect(x + 19, y + 9, 2, 8, WHITE);
+  // --- Shoulder hump ---
+  tft.fillRect(x + 12, y + 7, 8, 3, WHITE);
+  // --- Arms ---
+  if (swing) {
+    tft.drawLine(x + 10, y + 11, x + 6, y + 22, WHITE);
+    tft.drawLine(x + 10, y + 12, x + 7, y + 22, WHITE);
+    tft.drawLine(x + 11, y + 12, x + 7, y + 23, WHITE);
+    tft.drawLine(x + 19, y + 11, x + 23, y + 20, WHITE);
+    tft.drawLine(x + 19, y + 12, x + 24, y + 20, WHITE);
+  } else {
+    tft.drawLine(x + 10, y + 11, x + 7, y + 20, WHITE);
+    tft.drawLine(x + 10, y + 12, x + 8, y + 20, WHITE);
+    tft.drawLine(x + 19, y + 11, x + 22, y + 22, WHITE);
+    tft.drawLine(x + 19, y + 12, x + 23, y + 22, WHITE);
+    tft.drawLine(x + 20, y + 12, x + 23, y + 23, WHITE);
+  }
+  // --- Legs ---
+  int16_t hip = y + 21;
+  if (swing) {
+    tft.fillRect(x + 11, hip, 4, 4, WHITE);
+    tft.fillRect(x + 13, hip + 4, 3, 4, WHITE);
+    tft.fillRect(x + 14, hip + 8, 3, 2, WHITE);
+    tft.fillRect(x + 13, hip + 10, 6, 2, WHITE);
+    tft.fillRect(x + 14, hip, 4, 5, WHITE);
+    tft.drawLine(x + 14, hip + 5, x + 10, hip + 9, WHITE);
+    tft.drawLine(x + 15, hip + 5, x + 11, hip + 9, WHITE);
+    tft.drawLine(x + 16, hip + 5, x + 12, hip + 9, WHITE);
+    tft.fillRect(x + 7, hip + 9, 6, 2, WHITE);
+    tft.fillRect(x + 6, hip + 10, 3, 2, WHITE);
+  } else {
+    tft.fillRect(x + 11, hip, 4, 5, WHITE);
+    tft.drawLine(x + 11, hip + 5, x + 8, hip + 9, WHITE);
+    tft.drawLine(x + 12, hip + 5, x + 9, hip + 9, WHITE);
+    tft.drawLine(x + 13, hip + 5, x + 10, hip + 9, WHITE);
+    tft.fillRect(x + 5, hip + 9, 6, 2, WHITE);
+    tft.fillRect(x + 4, hip + 10, 3, 2, WHITE);
+    tft.fillRect(x + 14, hip, 4, 4, WHITE);
+    tft.fillRect(x + 16, hip + 4, 3, 4, WHITE);
+    tft.fillRect(x + 17, hip + 8, 3, 2, WHITE);
+    tft.fillRect(x + 16, hip + 10, 6, 2, WHITE);
+  }
+}
+
+static void sasquatchStartTFT() {
+  if (sqActive_ || pigTwerking_) return;
+  sqActive_ = true;
+  sqX_      = -26;
+  sqMs_     = millis();
+  sqPhase_  = 0;
+  tft.fillRect(0, 21, tft.width(), tft.height() - 21, BLACK);
+  Serial.println("[SQ] SIGHTING");
+}
+
 // Twerk draw: FRONT HALF (head, front legs) stays at y.
 //             BACK HALF (body, tail, back legs) rises up by 'rise' pixels.
 static void drawPigTwerkTFT(int16_t x, int16_t y, uint8_t phase) {
@@ -1583,10 +1679,26 @@ static void pigAnimTickTFT() {
 
   uint32_t now = millis();
 
+  // Sasquatch walk — runs instead of pig when active
+  if (sqActive_) {
+    if (now - sqMs_ < 80) return;
+    sqMs_ = now;
+    tft.fillRect(0, 21, tft.width(), tft.height() - 21, BLACK);
+    sqX_ += 2;
+    sqPhase_ = (sqPhase_ + 1) & 3;
+    if (sqX_ < tft.width()) drawSasquatchTFT(sqX_, 76, sqPhase_);
+    if (sqX_ > tft.width() + 4) {
+      sqActive_ = false;
+      tft.fillRect(0, 21, tft.width(), tft.height() - 21, BLACK);
+      pig.x = 0; pig.dx = 1; pig.phase = 0;
+      Serial.println("[SQ] Gone");
+    }
+    return;
+  }
+
   // Twerk expires after 3 s
   if (pigTwerking_ && (now - pigTwerkMs_ >= 3000)) {
     pigTwerking_ = false;
-    // Clear twerk area and redraw header cleanly
     tft.fillRect(0, 21, tft.width(), tft.height() - 21, BLACK);
     Serial.println("[PIG] Twerk complete");
   }
@@ -3016,6 +3128,14 @@ static void processScanResults(int n) {
   }
 
   WiFi.scanDelete();
+
+  // Force flush after each scan batch so data reaches the SD card promptly.
+  // Minimises data loss if the device loses power between scan cycles.
+  if (wrote > 0 && sdOk && logFile) {
+    digitalWrite(PINS.tft_cs, HIGH);
+    logFile.flush();
+  }
+
   if (wrote > 0) ledPulseGreen();
   Serial.printf("[SCAN] Wrote %lu rows\n", (unsigned long)wrote);
 }
@@ -3128,8 +3248,9 @@ static void pollButton() {
 
   // Evaluate click count after multi-tap window expires
   if (clickCount > 0 && (millis() - firstClickMs) > MULTI_MS) {
-    if (clickCount >= 2 && currentPage == 3) {
-      // Double-tap on pig page -> TWERK
+    if (clickCount >= 3 && currentPage == 3) {
+      sasquatchStartTFT();
+    } else if (clickCount == 2 && currentPage == 3) {
       pigTwerkStartTFT();
     } else {
       // Single (or unrecognised multi) press -> advance page
@@ -3227,21 +3348,35 @@ void setup() {
   GPSSerial.setRxBufferSize(512);
   GPSSerial.begin(cfg.gpsBaud, SERIAL_8N1, PINS.gps_rx, PINS.gps_tx);
 
-  // WiFi setup: mesh mode skips STA entirely; normal mode tries STA and falls back to AP.
+  // WiFi setup: mesh boot with a home network connects STA first for auto-upload,
+  // then hands off to mesh. Mesh boot with no home network skips STA/AP entirely.
+  // Normal wardriving boot tries STA and falls back to AP.
   WiFi.mode(WIFI_STA);
   bool staOk = false;
   {
     String mm = cfg.meshModeOnBoot; mm.toLowerCase();
-    if (mm == "node" || mm == "core") {
-      // Dedicated mesh boot — skip STA connect and AP window entirely.
-      Serial.printf("[BOOT] meshModeOnBoot=%s — skipping STA/AP\n", cfg.meshModeOnBoot.c_str());
+    bool coreBoot    = (mm == "core");
+    bool nodeBoot    = (mm == "node");
+    bool hasHomeSsid = (cfg.homeSsid.length() > 0);
+
+    if (nodeBoot) {
+      // Node mode always skips STA/AP — go straight to mesh.
+      Serial.println("[BOOT] meshModeOnBoot=node — skipping STA/AP");
+    } else if (coreBoot && !hasHomeSsid) {
+      // Core with no home network — skip STA/AP, go straight to mesh.
+      Serial.println("[BOOT] meshModeOnBoot=core, no homeSsid — skipping STA/AP");
     } else {
-      // Normal wardriving boot: attempt STA, fall back to AP if it fails.
       staOk = connectSTA(12000);
       if (!staOk) {
         WiFi.setAutoReconnect(false); WiFi.persistent(false);
         WiFi.disconnect(true, true); delay(100);
-        startAP();
+        if (!coreBoot) {
+          // Normal wardriving: fall back to AP for web UI access.
+          startAP();
+        } else {
+          // Core boot: STA failed, skip AP — proceed to mesh mode.
+          Serial.println("[BOOT] meshModeOnBoot=core, STA failed — skipping AP");
+        }
       }
     }
   }
@@ -3301,7 +3436,9 @@ void setup() {
   }
 
   // Auto-start mesh mode if meshModeOnBoot=Core|Node.
-  // Activates unconditionally — STA was skipped above for mesh boots.
+  // Core mode: STA was used for upload above and must be torn down so
+  // ESP-Now can start cleanly on the admin channel without interference.
+  // Node mode: STA was already skipped.
   {
     String mm = cfg.meshModeOnBoot;
     mm.toLowerCase();
@@ -3311,6 +3448,15 @@ void setup() {
       pageNeedsInit[4] = true;
       enterNodeMode();
     } else if (mm == "core") {
+      // Tear down STA cleanly before entering Core — the STA connection
+      // (if any) was only needed for auto-upload and must not remain active
+      // or ESP-Now channel control will conflict with the STA home channel.
+      if (WiFi.status() == WL_CONNECTED || WiFi.getMode() != WIFI_OFF) {
+        Serial.println("[BOOT] Tearing down STA before Core mode");
+        WiFi.disconnect(true, true);
+        WiFi.mode(WIFI_OFF);
+        delay(150);
+      }
       Serial.println("[BOOT] meshModeOnBoot=Core — entering Mesh Core mode");
       currentPage = 4;
       enterCoreMode();

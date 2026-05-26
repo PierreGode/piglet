@@ -292,8 +292,88 @@ void pigTwerkStart() {
   pigTwerking_   = true;
   pigTwerkMs_    = millis();
   pigTwerkPhase_ = 0;
-  pigTwerkX_     = pig.x;  // freeze at current position
+  pigTwerkX_     = pig.x;
   Serial.println("[PIG] TWERK ACTIVATED");
+}
+
+// ---- Sasquatch walk ----
+static bool     sqActive_  = false;
+static int16_t  sqX_       = -26;
+static uint32_t sqMs_      = 0;
+static uint8_t  sqPhase_   = 0;
+
+static void drawSasquatch(int16_t x, int16_t y, uint8_t phase) {
+  // Classic frame 352 pose: mid-stride, upright, head turned back over right shoulder.
+  // Solid filled silhouette ~26w x 34h, facing right.
+  bool swing = (phase & 1);
+  // --- Head (turned back, flat-top sagittal crest) ---
+  display.fillRoundRect(x + 14, y, 7, 7, 2, SSD1306_WHITE);
+  display.fillRect(x + 14, y, 7, 3, SSD1306_WHITE);  // flat top
+  display.fillRect(x + 13, y + 3, 2, 4, SSD1306_WHITE);  // jaw/muzzle
+  // --- Neck (thick, sloped) ---
+  display.fillRect(x + 14, y + 6, 5, 3, SSD1306_WHITE);
+  // --- Torso (broad, slightly forward lean) ---
+  display.fillRoundRect(x + 10, y + 8, 10, 14, 3, SSD1306_WHITE);
+  display.fillRect(x + 9, y + 9, 3, 10, SSD1306_WHITE);  // front bulk
+  display.fillRect(x + 19, y + 9, 2, 8, SSD1306_WHITE);  // back bulk
+  // --- Shoulder / trapezius hump ---
+  display.fillRect(x + 12, y + 7, 8, 3, SSD1306_WHITE);
+  // --- Arms (long, past the knee, thick) ---
+  if (swing) {
+    // front arm forward
+    display.drawLine(x + 10, y + 11, x + 6, y + 22, SSD1306_WHITE);
+    display.drawLine(x + 10, y + 12, x + 7, y + 22, SSD1306_WHITE);
+    display.drawLine(x + 11, y + 12, x + 7, y + 23, SSD1306_WHITE);
+    // rear arm back
+    display.drawLine(x + 19, y + 11, x + 23, y + 20, SSD1306_WHITE);
+    display.drawLine(x + 19, y + 12, x + 24, y + 20, SSD1306_WHITE);
+  } else {
+    // front arm back
+    display.drawLine(x + 10, y + 11, x + 7, y + 20, SSD1306_WHITE);
+    display.drawLine(x + 10, y + 12, x + 8, y + 20, SSD1306_WHITE);
+    // rear arm forward
+    display.drawLine(x + 19, y + 11, x + 22, y + 22, SSD1306_WHITE);
+    display.drawLine(x + 19, y + 12, x + 23, y + 22, SSD1306_WHITE);
+    display.drawLine(x + 20, y + 12, x + 23, y + 23, SSD1306_WHITE);
+  }
+  // --- Legs (muscular thighs, bent knees, large calves) ---
+  int16_t hip = y + 21;
+  if (swing) {
+    // front leg forward stride
+    display.fillRect(x + 11, hip, 4, 4, SSD1306_WHITE);  // thigh
+    display.fillRect(x + 13, hip + 4, 3, 4, SSD1306_WHITE);  // shin
+    display.fillRect(x + 14, hip + 8, 3, 2, SSD1306_WHITE);
+    display.fillRect(x + 13, hip + 10, 6, 2, SSD1306_WHITE);  // big foot
+    // rear leg back
+    display.fillRect(x + 14, hip, 4, 5, SSD1306_WHITE);
+    display.drawLine(x + 14, hip + 5, x + 10, hip + 9, SSD1306_WHITE);
+    display.drawLine(x + 15, hip + 5, x + 11, hip + 9, SSD1306_WHITE);
+    display.drawLine(x + 16, hip + 5, x + 12, hip + 9, SSD1306_WHITE);
+    display.fillRect(x + 7, hip + 9, 6, 2, SSD1306_WHITE);
+    display.fillRect(x + 6, hip + 10, 3, 2, SSD1306_WHITE);  // heel
+  } else {
+    // front leg back
+    display.fillRect(x + 11, hip, 4, 5, SSD1306_WHITE);
+    display.drawLine(x + 11, hip + 5, x + 8, hip + 9, SSD1306_WHITE);
+    display.drawLine(x + 12, hip + 5, x + 9, hip + 9, SSD1306_WHITE);
+    display.drawLine(x + 13, hip + 5, x + 10, hip + 9, SSD1306_WHITE);
+    display.fillRect(x + 5, hip + 9, 6, 2, SSD1306_WHITE);
+    display.fillRect(x + 4, hip + 10, 3, 2, SSD1306_WHITE);
+    // rear leg forward stride
+    display.fillRect(x + 14, hip, 4, 4, SSD1306_WHITE);
+    display.fillRect(x + 16, hip + 4, 3, 4, SSD1306_WHITE);
+    display.fillRect(x + 17, hip + 8, 3, 2, SSD1306_WHITE);
+    display.fillRect(x + 16, hip + 10, 6, 2, SSD1306_WHITE);
+  }
+}
+
+void sasquatchStart() {
+  if (sqActive_ || pigTwerking_) return;
+  sqActive_ = true;
+  sqX_      = -26;
+  sqMs_     = millis();
+  sqPhase_  = 0;
+  Serial.println("[SQ] SIGHTING");
 }
 
 void pigAnimTick() {
@@ -303,6 +383,31 @@ void pigAnimTick() {
   if (pigTwerking_ && (now - pigTwerkMs_ >= 3000)) {
     pigTwerking_ = false;
     Serial.println("[PIG] Twerk complete");
+  }
+
+  // Sasquatch walk — runs instead of pig when active
+  if (sqActive_) {
+    if (now - sqMs_ < 80) return;
+    sqMs_ = now;
+
+    display.clearDisplay();
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(2);
+    display.setCursor(0, 0);
+    display.print("Piglet");
+    display.drawFastHLine(0, OLED_YELLOW_H - 1, OLED_W, SSD1306_WHITE);
+
+    sqX_ += 2;
+    sqPhase_ = (sqPhase_ + 1) & 3;
+    if (sqX_ < OLED_W) drawSasquatch(sqX_, 30, sqPhase_);
+    display.display();
+
+    if (sqX_ > OLED_W + 4) {
+      sqActive_ = false;
+      pig.x = 0; pig.dx = 1; pig.phase = 0;
+      Serial.println("[SQ] Gone");
+    }
+    return;
   }
 
   // Faster frame rate during twerk
@@ -319,16 +424,13 @@ void pigAnimTick() {
 
   if (pigTwerking_) {
     pigTwerkPhase_ = (pigTwerkPhase_ + 1) & 3;
-    // drawPigTwerk handles all y-offsets internally via the 'rise' per phase
     drawPigTwerk(pigTwerkX_, pig.y, pigTwerkPhase_);
-    // Flash "OINK!" above the pig on odd phases
     if (pigTwerkPhase_ & 1) {
       display.setTextSize(1);
       display.setCursor(74, OLED_YELLOW_H + 2);
       display.print("OINK!");
     }
   } else {
-    // Normal walk
     pig.x += pig.dx;
     if (pig.x <= 0)              { pig.x = 0;              pig.dx =  1; }
     if (pig.x >= (128 - PIG_W))  { pig.x = 128 - PIG_W;    pig.dx = -1; }

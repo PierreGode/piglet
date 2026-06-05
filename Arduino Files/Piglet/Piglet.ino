@@ -66,7 +66,11 @@ static void enterDeepSleep() {
     rtc_gpio_pullup_en((gpio_num_t)pins.btn);
     rtc_gpio_pulldown_dis((gpio_num_t)pins.btn);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)pins.btn, 0);  // wake on LOW
-  #elif defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C5)
+  #elif SOC_PM_SUPPORT_EXT1_WAKEUP
+    // C5 / C6: LP-IO based deep-sleep wake on button LOW.
+    // (newer esp32 cores drop esp_deep_sleep_enable_gpio_wakeup for C5)
+    esp_sleep_enable_ext1_wakeup_io(1ULL << pins.btn, ESP_EXT1_WAKEUP_ANY_LOW);
+  #elif SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
     esp_deep_sleep_enable_gpio_wakeup(1ULL << pins.btn, ESP_GPIO_WAKEUP_GPIO_LOW);
   #else
     esp_sleep_enable_ext0_wakeup((gpio_num_t)pins.btn, 0);  // fallback

@@ -43,7 +43,7 @@
 #include "esp32-hal-matrix.h"
 
 // Firmware version
-#define FIRMWARE_VERSION "v2.54"
+#define FIRMWARE_VERSION "v2.56"
 
 // ---------------- Pins (T-DONGLE C5) ----------------
 struct PinMap {
@@ -454,6 +454,10 @@ static String normalizeSdPath(const char* dir, const char* nameIn) {
   return d + "/" + n;
 }
 
+// Row limit per CSV: ~120 bytes/row x 100k = ~12 MB, under WDGoWars 15 MB cap.
+static const uint32_t CSV_MAX_ROWS = 100000;
+static uint32_t       csvRowCount  = 0;
+
 // Sanitise device name for filename/header use
 static String tdongleSanitiseName(const String& raw) {
   String s = raw; s.replace(" ", "_");
@@ -517,6 +521,7 @@ static bool openLogFile() {
   logFile.println(",display=TFT-ST7735-80x160,board=LilyGo-T-Dongle-C5,brand=Piglet,star=Sol,body=3,subBody=0");
   logFile.println("MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type");
   logFile.flush();
+  csvRowCount = 0;
   return true;
 }
 
@@ -524,6 +529,13 @@ static void appendWigleRow(const String& mac, const String& ssid, const String& 
                            const String& firstSeen, int channel, int rssi,
                            double lat, double lon, double altM, double accM) {
   if (!sdOk || !logFile) return;
+
+  // Rotate CSV before it exceeds the WDGoWars 15 MB upload limit
+  if (csvRowCount >= CSV_MAX_ROWS) {
+    Serial.println("[SD] CSV row limit reached, rotating log file");
+    closeLogFile();
+    if (!openLogFile()) return;
+  }
 
   String safeSsid = ssid;
   safeSsid.replace("\"", "\"\"");
@@ -550,6 +562,7 @@ static void appendWigleRow(const String& mac, const String& ssid, const String& 
 
   digitalWrite(PINS.tft_cs, HIGH);
   size_t written = logFile.println(line);
+  csvRowCount++;
 
   // Detect silent write failure — if println() returns 0 for a non-empty line,
   // the SD card or file handle is broken. Attempt to reopen the log file once;
@@ -1754,7 +1767,7 @@ static const uint32_t JCMK_REQ_INIT_MS     = 300;
 static const uint32_t JCMK_REQ_MAX_MS      = 5000;
 static const uint32_t JCMK_HB_MS          = 5000;
 static const uint32_t NODE_SCAN_DWELL_MS  = 80;    // ms per channel (JCMK CHANNEL_TIMER)
-static const uint32_t NODE_ADMIN_WIN_MS   = 300;   // ch-6 window after each full cycle
+static const uint32_t NODE_ADMIN_WIN_MS   = 500;   // ch-6 window after each scan cycle
 #define JCMK_TEXT_MAX 200
 
 enum JcmkMsgType : uint8_t {
@@ -1846,10 +1859,10 @@ static uint8_t      coreAssignVer   = 0;
 static uint32_t     coreLastHbMs    = 0;
 static uint32_t     coreHbCounter   = 0;
 static const uint32_t CORE_HB_MS         = 5000;
-static const uint32_t CORE_NODE_TIMEOUT  = 45000;  // 45 s — accounts for blocking scan latency
+static const uint32_t CORE_NODE_TIMEOUT  = 90000;  // 90 s — generous for many-node ESP-Now collisions
 
 #define CORE_REQ_QUEUE  16
-#define CORE_TEXT_QUEUE 64   // large enough for burst from two nodes per cycle
+#define CORE_TEXT_QUEUE 192  // sized for burst from 12 nodes x ~15 networks each
 struct CorReqSlot  { uint8_t mac[6]; bool isBiscuit; };
 struct CorTextSlot { char    line[JCMK_TEXT_MAX + 1]; };
 static CorReqSlot         coreReqBuf[CORE_REQ_QUEUE];
@@ -2121,12 +2134,12 @@ static void coreResendAdminToAll() {
 }
 
 static void coreSendHeartbeatToAll() {
-  // Use full-size jcmk_text_msg_t (212 bytes) so Biscuit Node accepts it.
+  // Broadcast a single heartbeat instead of per-node unicast.
+  // Reduces ch 6 congestion from 12 sends down to 1.
   jcmk_text_msg_t msg = {};
   memcpy(msg.magic, JCMK_MAGIC, 4);
   msg.type = JCMK_MSG_HEARTBEAT; msg.counter = ++coreHbCounter; msg.len = 0;
-  for (uint8_t i = 0; i < CORE_MAX_NODES; i++)
-    if (coreNodes[i].active) esp_now_send(coreNodes[i].mac, (uint8_t*)&msg, sizeof(msg));
+  esp_now_send(JCMK_BCAST, (uint8_t*)&msg, sizeof(msg));
 }
 
 static void coreParseAndLogText(const char* line) {
@@ -2241,7 +2254,8 @@ static void nodeDoScanTick() {
       jcmkSetChannel(JCMK_ESPNOW_CH);
       if (jcmkHaveCore) { jcmkSendHeartbeat(); jcmkLastHbMs = millis(); }
       nodeScanAdminWin = true;
-      nodeScanAdminMs  = millis();
+      // Random jitter (0-200 ms) staggers admin windows across nodes
+      nodeScanAdminMs  = millis() + (uint32_t)(esp_random() % 200);
       return;
     }
 

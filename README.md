@@ -30,6 +30,7 @@ Designed for **[Seeed XIAO ESP32-S3](https://wiki.seeedstudio.com/xiao_esp32s3_g
 - **ESP-Now Mesh Node mode** — pair with a coordinator device for multi-node wardriving
 - **Mesh auto-start on boot** — configure `meshModeOnBoot` to automatically enter Core or Node mode after uploads complete, bypassing the AP window
 - **Screen rotation** — mount the display upside-down and set `rotateScreen180=true` to flip 180°
+- **Auto-start wardriving after uploads** — set `autoStartAfterUpload=true` to disconnect from home Wi-Fi immediately after boot uploads complete and begin scanning without delay
 - **PigletNode** — standalone minimal firmware for XIAO ESP32-C5 that boots directly as a mesh node (no display, GPS, or SD required)
 
 
@@ -356,7 +357,42 @@ meshModeOnBoot=none
 # Reboot required after changing.
 
 rotateScreen180=false
+
+# ------------------------------------------------------------
+# Auto-Start Wardriving After Uploads
+# ------------------------------------------------------------
+# When true: disconnects from home Wi-Fi immediately after boot uploads
+# complete and begins wardriving without delay. The web UI remains
+# accessible if you later connect to the Wardriver AP, but the device
+# will not hold the STA link open.
+# Values: true or false
+# Reboot required after changing.
+
+autoStartAfterUpload=false
 ```
+
+### Auto-Start Wardriving After Uploads — How to Disable
+
+> **Important:** When `autoStartAfterUpload=true`, the device disconnects from your home Wi-Fi immediately after uploads finish and goes straight into wardriving. Because it no longer holds the STA connection, the web UI is **not** reachable on your home network after boot.
+
+To disable this setting after it has been enabled, you have two options:
+
+**Option 1 — Connect via the Wardriver AP**
+
+When Piglet is away from the saved home network (or the home network is unavailable), it falls back to its own SoftAP. Connect to it and use the web UI:
+
+1. Power on the device somewhere the home Wi-Fi is not in range (or temporarily forget the home network on the device by clearing `homeSsid` in the config)
+2. Connect your phone or laptop to the **Wardriver SSID** (default: `Piglet-WARDRIVE` / `wardrive1234`)
+3. Open a browser and go to **`http://192.168.4.1`**
+4. In the **Configuration** section, set **Auto-Start Wardriving After Uploads** to **Disabled**
+5. Click **Save & Reboot**
+
+**Option 2 — Edit the SD card directly**
+
+1. Remove the SD card from the device
+2. Open `wardriver.cfg` in any text editor
+3. Change `autoStartAfterUpload=true` to `autoStartAfterUpload=false`
+4. Save the file, re-insert the SD card, and reboot
 
 
 ## Button Functions

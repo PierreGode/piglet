@@ -377,7 +377,7 @@ void appendWigleRow(const String& mac, const String& ssid, const String& auth,
   // Mirror to USB serial for Ragnar live-stream — non-blocking.
   // If the CDC TX buffer doesn't have room (no reader, or reader is slow),
   // drop this line rather than stall the scan loop. SD log above is authoritative.
-  if (Serial.availableForWrite() >= (int)(line.length() + 2)) {
+  if (Serial.availableForWrite() >= (int)(strlen(line) + 2)) {   // line: char[256] since v2.62
     Serial.println(line);
   }
 

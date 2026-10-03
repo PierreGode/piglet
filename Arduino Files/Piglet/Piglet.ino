@@ -35,6 +35,7 @@
 #include "WigleUpload.h"
 #include "WebUI.h"
 #include "MeshNode.h"
+#include "SerialSync.h"
 
 // -------- Battery Test (uncomment to enable) --------
 #include "battery_test.h"
@@ -236,9 +237,9 @@ void setup() {
 
   SPI.begin(pins.sd_sck, pins.sd_miso, pins.sd_mosi, pins.sd_cs);
 
-  // Try SD at a reasonable speed first, then fall back slower
-  sdOk = SD.begin(pins.sd_cs, SPI, 8000000);
-  if (!sdOk) sdOk = SD.begin(pins.sd_cs, SPI, 4000000);
+  // Negotiate the fastest working SD clock (descending ladder, capped by
+  // cfg.sdMaxSpiHz) instead of a fixed speed.
+  sdOk = sdBeginBestClock(pins.sd_cs);
 
   Serial.print("[SD] SD.begin (bootstrap pins): ");
   Serial.println(sdOk ? "OK" : "FAIL");
@@ -282,8 +283,7 @@ void setup() {
 
     SPI.begin(pins.sd_sck, pins.sd_miso, pins.sd_mosi, pins.sd_cs);
 
-    sdOk = SD.begin(pins.sd_cs, SPI, 8000000);
-    if (!sdOk) sdOk = SD.begin(pins.sd_cs, SPI, 4000000);
+    sdOk = sdBeginBestClock(pins.sd_cs);
 
     Serial.print("[SD] SD.begin (final pins): ");
     Serial.println(sdOk ? "OK" : "FAIL");
@@ -317,8 +317,7 @@ void setup() {
       Serial.println("[SD] Re-init SPI + SD after config pinmap change...");
       SPI.begin(pins.sd_sck, pins.sd_miso, pins.sd_mosi, pins.sd_cs);
 
-      sdOk = SD.begin(pins.sd_cs, SPI, 8000000);
-      if (!sdOk) sdOk = SD.begin(pins.sd_cs, SPI, 4000000);
+      sdOk = sdBeginBestClock(pins.sd_cs);
 
       Serial.print("[SD] SD.begin (post-config pins): ");
       Serial.println(sdOk ? "OK" : "FAIL");
@@ -570,6 +569,9 @@ void setup() {
 //  loop()
 // ================================================================
 void loop() {
+  // USB serial file sync (a host pulls the SD CSV logs, e.g. after a solo drive)
+  serialSyncPoll();
+
   // Web server
   server.handleClient();
 
